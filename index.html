@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂閱以解鎖影片</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f0f0f;
+            color: white;
+        }
+        .locked-overlay {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+        }
+        /* 模擬 YouTube 按鈕樣式 */
+        .yt-btn {
+            background-color: #cc0000;
+            color: white;
+            transition: all 0.3s;
+        }
+        .yt-btn:hover {
+            background-color: #ff0000;
+            transform: scale(1.05);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="max-w-3xl w-full bg-[#1e1e1e] rounded-xl overflow-hidden shadow-2xl border border-gray-700 relative">
+        
+        <!-- 標題區 -->
+        <div class="p-6 border-b border-gray-700 text-center">
+            <h1 class="text-2xl font-bold mb-2">專屬會員影片</h1>
+            <p class="text-gray-400 text-sm">請完成訂閱步驟以解鎖觀看權限</p>
+        </div>
+
+        <!-- 影片容器 -->
+        <div class="relative aspect-video bg-black w-full">
+            
+            <!-- 真正的 YouTube 影片 -->
+            <!-- 
+                更新紀錄：
+                原 ID (5yzaEj3HX8M) 已失效，導致 Error 153。
+                新 ID (jfKfPfyJRdk) 為目前有效的 Lofi Girl 直播。
+                若仍無法播放，請確認瀏覽器未阻擋第三方 Cookie。
+            -->
+            <iframe id="secretVideo" 
+                class="w-full h-full" 
+                src="https://www.youtube.com/embed/jfKfPfyJRdk?enablejsapi=1" 
+                title="YouTube video player" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+
+            <!-- 鎖定遮罩 (這層蓋在影片上面) -->
+            <div id="lockOverlay" class="locked-overlay absolute inset-0 flex flex-col items-center justify-center z-10 text-center p-6">
+                
+                <div class="mb-6 bg-gray-800 p-4 rounded-full w-24 h-24 flex items-center justify-center shadow-lg">
+                    <i class="fas fa-lock text-4xl text-gray-400"></i>
+                </div>
+
+                <h2 class="text-xl font-bold mb-4">此影片已上鎖</h2>
+                <p class="text-gray-300 mb-8 max-w-md">
+                    為了支持創作者，請先訂閱我們的頻道。訂閱完成後，系統將自動解鎖影片內容。
+                </p>
+
+                <!-- 步驟 1: 訂閱按鈕 -->
+                <button id="subBtn" onclick="startUnlockProcess()" class="yt-btn px-8 py-3 rounded-full font-bold text-lg flex items-center gap-2 mb-4">
+                    <i class="fab fa-youtube"></i>
+                    點擊訂閱頻道
+                </button>
+
+                <!-- 步驟 2: 檢查中 (預設隱藏) -->
+                <div id="checkingState" class="hidden flex-col items-center">
+                    <div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+                    <p class="text-red-400 font-bold" id="statusText">正在驗證訂閱狀態...</p>
+                    <p class="text-xs text-gray-500 mt-2">請在新開的視窗中按下訂閱</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 底部資訊 -->
+        <div class="p-4 bg-[#181818] text-center text-xs text-gray-500">
+            Powered by Content Locker
+        </div>
+    </div>
+
+    <script>
+        // 設定區：
+        // 你的頻道訂閱連結 (加上 sub_confirmation=1)
+        const CHANNEL_URL = "https://www.youtube.com/@edreamerTW?sub_confirmation=1";
+        
+        // 等待時間 (毫秒)
+        const WAIT_TIME = 6000; 
+
+        function startUnlockProcess() {
+            const subBtn = document.getElementById('subBtn');
+            const checkingState = document.getElementById('checkingState');
+            const statusText = document.getElementById('statusText');
+            const lockOverlay = document.getElementById('lockOverlay');
+            const video = document.getElementById('secretVideo');
+
+            // 1. 開啟訂閱視窗 (使用浮動彈出視窗 Popup)
+            const width = 600;
+            const height = 700;
+            // 計算螢幕中央位置
+            const left = (window.innerWidth - width) / 2 + window.screenX;
+            const top = (window.innerHeight - height) / 2 + window.screenY;
+            
+            // 使用 window.open 開啟置中視窗
+            window.open(
+                CHANNEL_URL, 
+                'YoutubeSubscribeWindow', 
+                `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`
+            );
+
+            // 2. 切換 UI 到「檢查中」
+            subBtn.classList.add('hidden');
+            checkingState.classList.remove('hidden');
+            checkingState.classList.add('flex');
+
+            // 3. 模擬檢查過程 (倒數計時)
+            let remainingTime = WAIT_TIME / 1000;
+            
+            const timer = setInterval(() => {
+                remainingTime--;
+            }, 1000);
+
+            // 4. 時間到，解鎖
+            setTimeout(() => {
+                clearInterval(timer);
+                
+                // 更改文字
+                statusText.innerText = "驗證成功！正在解鎖...";
+                statusText.classList.replace('text-red-400', 'text-green-500');
+
+                // 稍微延遲一下讓使用者看到成功訊息
+                setTimeout(() => {
+                    // 淡出遮罩
+                    lockOverlay.style.transition = "opacity 0.5s";
+                    lockOverlay.style.opacity = "0";
+                    
+                    // 移除遮罩層並自動播放影片
+                    setTimeout(() => {
+                        lockOverlay.style.display = "none";
+                        // 嘗試自動播放
+                        video.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                    }, 500);
+                    
+                }, 800);
+
+            }, WAIT_TIME);
+        }
+    </script>
+</body>
+</html>
